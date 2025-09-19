@@ -5,49 +5,60 @@ import Banner from './components/Banner';
 import Row from './components/Row';
 import Modal from './components/Modal';
 import { fetchTMDB } from './lib/tmdb';
+import { TMDBMediaItem, TMDBVideo } from './types';
+
 export default function Home() {
-  const [trending, setTrending] = useState([]);
-  const [popular, setPopular] = useState([]);
-  const [topRated, setTopRated] = useState([]);
-  const [bannerItem, setBannerItem] = useState(null);
+  const [trending, setTrending] = useState<TMDBMediaItem[]>([]);
+  const [popular, setPopular] = useState<TMDBMediaItem[]>([]);
+  const [topRated, setTopRated] = useState<TMDBMediaItem[]>([]);
+  const [bannerItem, setBannerItem] = useState<TMDBMediaItem | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [videoKey, setVideoKey] = useState(null);
-  const [selectedTitle, setSelectedTitle] = useState(null);
+  const [videoKey, setVideoKey] = useState<string | null>(null);
+  const [selectedTitle, setSelectedTitle] = useState<string | null>(null);
+
   useEffect(() => {
     async function load() {
       try {
         const t = await fetchTMDB('/trending/all/week');
         setTrending(t.results || []);
+
         const p = await fetchTMDB('/movie/popular');
         setPopular(p.results || []);
+
         const r = await fetchTMDB('/movie/top_rated');
         setTopRated(r.results || []);
+
         const choose =
           (p.results && p.results[Math.floor(Math.random() * p.results.length)]) ||
           (t.results && t.results[0]);
-        setBannerItem(choose);
+        setBannerItem(choose || null);
       } catch (e) {
         console.error(e);
       }
     }
     load();
   }, []);
-  async function handleItemClick(item: { title: any; name: any; media_type: string; first_air_date: any; id: any; }) {
+
+  async function handleItemClick(item: TMDBMediaItem) {
     try {
       setModalOpen(true);
       setVideoKey(null);
-      setSelectedTitle(item.title || item.name);
+      setSelectedTitle(item.title || item.name || '');
+
       const type = item.media_type === 'tv' || item.first_air_date ? 'tv' : 'movie';
       const data = await fetchTMDB(`/${type}/${item.id}/videos`);
-      const trailer = (data.results || []).find(
-        (v: { site: string; type: string; }) => v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser')
+
+      const trailer = (data.results as TMDBVideo[]).find(
+        (v) => v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser')
       );
+
       setVideoKey(trailer?.key || null);
     } catch (e) {
       console.error(e);
       setVideoKey(null);
     }
   }
+
   return (
     <div className="bg-[#04121e] min-h-screen text-white">
       <Navbar />
